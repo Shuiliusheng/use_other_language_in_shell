@@ -1,13 +1,5 @@
-#include<iostream>
-#include<stdio.h>
-#include<string.h>
-#include<vector>
-using namespace std;
+#include "transform.h"
 
-typedef struct{
-	char text[200];
-}Line;
-typedef vector<Line> Lines;
 
 void python_help()
 {
@@ -22,6 +14,7 @@ void python_help()
 	cout <<"6. python codes support define function in block"<<endl;
 	cout <<"7. python codes support call the defined python code by using the fuc define place number"<<endl;
 	cout <<"    function number start with 1 to ..."<<endl;
+	cout <<"8. if the input is string, it will replace all blanks to string \"###\" as inputs "<<endl;
 	cout <<endl;
 }
 
@@ -69,14 +62,17 @@ public:
 		fuc_num++;
 
 		Line temp;
-		sprintf(temp.text,"\ndef fun%d():\n",fuc_num);
+		sprintf(temp.text,"\ndef fuc%d():\n",fuc_num);
 		fuc_text.push_back(temp);
 
-		sprintf(temp.text,"#!/usr/bin/python\n# -*- coding: UTF-8 -*-\n");
-		imp_text.push_back(temp);
+		if(fuc_num==1)
+		{
+			sprintf(temp.text,"#!/usr/bin/python\n# -*- coding: UTF-8 -*-\n");
+			imp_text.push_back(temp);
 
-		sprintf(temp.text,"import sys \nimport cmath \nimport random \n");
-		imp_text.push_back(temp);
+			sprintf(temp.text,"import sys \nimport cmath \nimport random \n");
+			imp_text.push_back(temp);
+		}
 	}
 
 	//遇到python的结束
@@ -92,9 +88,9 @@ public:
 		//for shell
 		int i=0;
 			//call python script
-		sprintf(back,"pr=`python3 %s fun%d ", filename,fuc_num);
+		sprintf(back,"pr=`python3 %s fuc%d ", filename,fuc_num);
 		for(i=0;i<input.size();i++)
-			sprintf(back,"%s $%s",back,input[i].text);
+			sprintf(back,"%s ${%s// /\"###\"}",back,input[i].text);
 		sprintf(back,"%s`\n",back);
 	
 			//get outputs
@@ -116,6 +112,7 @@ public:
 
 		fprintf(p,"#----------------------------------------------\n");
 		//write subfuc line
+		this->add_decode_subfuc();
 		for(i=0;i<subfuc_text.size();i++)
 			fprintf(p,"%s",subfuc_text[i].text);
 		fprintf(p,"#----------------------------------------------\n");
@@ -127,12 +124,12 @@ public:
 
 		//write main
 		fprintf(p,"def main( fuc_name ):\n");
-		fprintf(p,"\tif fuc_name == \"fun1\":\n");
-		fprintf(p,"\t\tfun1()\n");
+		fprintf(p,"\tif fuc_name == \"fuc1\":\n");
+		fprintf(p,"\t\tfuc1()\n");
 		for(i=2;i<=fuc_num;i++)
 		{
-			fprintf(p,"\telif fuc_name == \"fun%d\":\n",i);
-			fprintf(p,"\t\tfun%d()\n",i);
+			fprintf(p,"\telif fuc_name == \"fuc%d\":\n",i);
+			fprintf(p,"\t\tfuc%d()\n",i);
 		}
 		fprintf(p,"\telse:\n\t\tprint (\"function name is wrong!\")\n");
 		
@@ -216,6 +213,16 @@ private:
 		return true;
 	}
 
+	//将转换后的字符串解码
+	void add_decode_subfuc()
+	{
+		Line temp;
+		sprintf(temp.text,"def decode_str(str):\n");
+		subfuc_text.push_back(temp);
+		sprintf(temp.text,"\treturn str.replace(\"###\",\" \")\n");
+		subfuc_text.push_back(temp);
+	}
+
 	//处理input行
 	bool input_line(char str[])
 	{
@@ -227,7 +234,7 @@ private:
 		get_params(&str[i],p1,p2);
 		
 		Line temp,temp1;
-		sprintf(temp.text,"\t%s=sys.argv[%d]\n",p1,input_num);
+		sprintf(temp.text,"\t%s=decode_str(sys.argv[%d])\n",p1,input_num);
 		fuc_text.push_back(temp);
 		input_num++;
 
